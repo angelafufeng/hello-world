@@ -1,0 +1,138 @@
+---
+title: "ggplot2"
+author: "Angela Fufeng"
+date: '2018-11-18'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Exploratory plots
+-data heavy
+-meant for specialist audience
+-rough first draft
+
+```{r}
+install.packages("ggplot2")
+library(ggplot2)
+```
+#Exploring ggplot2
+-ggplot2 will assume that variables are continuous unless specified
+-factor() will make the variable a factor
+-aes() = aesthetics
+
+##Scatterplot using mtcars, miles per gallon against weight
+ggplot(mtcars, aes(x = wt, y = mpg)) +
+  geom_point()
+
+##Colour is dependent on displacement of car engine
+ggplot(mtcars, aes(x = wt, y = mpg, color = disp)) +
+  geom_point()
+
+##Size is dependent on displacement of car engine
+ggplot(mtcars, aes(x = wt, y = mpg, size = disp)) +
+  geom_point()
+  
+-a continuous variable cannot be mapped to shape
+-geom_point() adds points to the plot
+-geom_point() + geom_smooth() will draw a smooth line over the points
+
+# 1 - The plot you created in the previous exercise
+ggplot(diamonds, aes(x = carat, y = price)) +
+  geom_point() +
+  geom_smooth()
+
+# 2 - Copy the above command but show only the smooth line
+ggplot(diamonds, aes(x = carat, y = price)) +
+  geom_smooth()
+
+
+# 3 - Copy the above command and assign the correct value to color in aes() 
+ggplot(diamonds, aes(x = carat, y = price, color = clarity)) +
+  geom_smooth()
+(translucent line)
+
+# 4 - Keep the color settings from previous command. Plot only the points with argument alpha (translucent points-- 0.4 = 60% visible or 40% clear)
+ggplot(diamonds, aes(x = carat, y = price, color = clarity)) +
+  geom_point(alpha = 0.4)
+(translucent points-- 0.4 = 60% visible or 40% clear)
+
+#Plot dia_plot with additional geom_smooth() with se set to FALSE
+dia_plot + geom_smooth(se = FALSE)
+se = FALSE gets rid of error shading
+
+#Base package and ggplot2
+A linear model of mpg described by wt:
+carModel <- lm(mpg ~ wt, data = mtcars)
+
+If you want to add a linear model to your plot, shown right, you can define it with lm() and then plot the resulting linear model with abline(): 
+abline(carModel, lty = 2)
+
+-method, se, and linetype have to be outside of aes()
+
+#gather() and separate()
+iris.tidy <- iris %>%
+  gather(key, Value, -Species) %>%
+  separate(key, c("Part", "Measure"), "\\.")
+  
+gather() rearranges the data frame by specifying the columns that are categorical variables with a - notation. 
+separate() splits up the new key column, which contains the former headers, according to ".".
+
+Need to add a new column called Flower that contains a unique identifier for each row in the data frame. This is because you'll rearrange the data frame afterwards and you need to keep track of which row, or which specific flower, each value came from. It's done for you, no need to add anything yourself.
+
+gather() rearranges the data frame by specifying the columns that are categorical variables with a - notation. In this case, Species and Flower are categorical. Complete the command.
+
+separate() splits up the new key column, which contains the former headers, according to .. The new column names "Part" and "Measure" are given in a character vector.
+
+The last step is to use spread() to distribute the new Measure column and associated value column into two columns.
+
+# Add column with unique ids
+iris$Flower <- 1:nrow(iris)
+
+iris.wide <- iris %>%
+  gather(key, value, -Species, -Flower) %>%
+  separate(key, c("Part", "Measure"), "\\.") %>%
+  spread(Measure, value)
+  
+Note: In this chapter you saw aesthetics and attributes. Variables in a data frame are mapped to aesthetics in aes(). (e.g. aes(col = cyl)) within ggplot(). Visual elements are set by attributes in specific geom layers (geom_point(col = "red")). Don't confuse these two things - here you're focusing on aesthetic mappings.
+
+When y = 0, use geom_jitter() to avoid having all the points on a horizontal line.
+
+# Dot plot with jittering
+ggplot(diamonds, aes(x = clarity, y = carat, color = price)) +
+  geom_point(alpha = 0.5, position = "jitter")
+
+#Histograms with geom_histogram()
+# 1 - Make a univariate histogram
+ggplot(mtcars, aes(x = mpg)) +
+  geom_histogram()
+
+# 2 - Plot 1, plus set binwidth to 1 in the geom layer
+ggplot(mtcars, aes(x = mpg)) +
+  geom_histogram(binwidth = 1)
+
+
+# 3 - Plot 2, plus MAP ..density.. to the y aesthetic (i.e. in a second aes() function)
+ggplot(mtcars, aes(x = mpg)) +
+  geom_histogram(binwidth = 1, aes(y = ..density..)) 
+
+
+# 4 - plot 3, plus SET the fill attribute to "#377EB8"
+ggplot(mtcars, aes(x = mpg)) +
+  geom_histogram(binwidth = 1, aes(y = ..density..), fill = "#377EB8")
+  
+geom_bar() for bar plots
+geom_point() for scatter plots
+geom_histogram() for histograms
+
+#Bar plots with geom_bar()
+geom_bar(position = "stack") = stacked columns
+geom_bar(position = "fill") = stacked columns that are converted to ratio (max = 1)
+geom_bar(position = "dodge") = columns side-by-side
+
+geom_freqpoly = Frequency polygon plots, like kernel density plots, allow several distributions to be displayed in the same panel.
+
+#Line plots
+gather() takes four arguments: the original data frame (fish.species), the name of the key column (Species), the name of the value column (Capture) and the name of the grouping variable, with a minus in front (-Year). They can all be specified as object names (i.e. no "").
