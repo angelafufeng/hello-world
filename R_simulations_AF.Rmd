@@ -1,0 +1,238 @@
+---
+title: "R_simulations"
+author: "Angela Fufeng"
+date: '2018-12-03'
+output: html_document
+---
+
+
+## Diploid simulator
+
+```{r}
+diploid_selection <- function(p0 = 0.1, wAA = 0.25, wAa = 0.5, waa = 0.25, n = 200) {
+  p = rep(NA, n) # store allele frequencies as vector
+  
+  w_bar <- rep(NA, n)
+  
+    p[1] <- p0
+
+    
+    w_bar[1] <- (p[1]*wAA) + (2*p[1]*(1-p[1])*wAa) + (((1-p[1])**2)*waa)
+    
+    for(i in 2:n) {
+      w_bar[i-1] <- (p[i-1]*wAA) + (2*p[i-1]*(1-p[i-1])*wAa) + (((1-p[i-1])**2)*waa)
+      p[i] <- ((p[i-1]**2)*wAA/w_bar[i-1]) + (p[i-1]*(1-p[i-1])*wAa/w_bar[i-1])
+
+    }
+    if (any(p > 0.9999)) {
+    fixation <- min(which.max(p > 0.9999))
+    cat("fixation for A occurs approximately at generation:", fixation )	
+    } else {
+        maxAlleleFreq <- max(p)
+    	cat("fixation of A does not occur, max. allele frequency is:", print(maxAlleleFreq, digits = 2) )}
+    return(p)
+    
+}
+```
+
+
+```{r}
+p <- diploid_selection()
+generations <- 1:length(p)
+plot(p ~ generations, pch = 20,
+     ylab = "allele frequency",
+     xlab = "generation")
+```
+
+## Genetic drift simulator
+
+```{r}
+genetic_drift <- function(A, pop, gen){
+  allele_freq <- rep(NA,gen)
+  allele_freq[1] <- A
+
+  allele_counts <- sample(c("A","a"), 
+                             size = pop, 
+                             replace = TRUE, 
+                             prob = c(A, 1-A))
+
+  for(i in 2:gen){
+    allele_counts <- sample(c("A", "a"),
+                            size = pop,
+                            replace = TRUE,
+                            prob = c(allele_freq[i-1],
+                                     (1-allele_freq[i-1])))
+    allele_freq[i] <- length(allele_counts[allele_counts=="A"])/length(allele_counts)
+
+  }
+return(allele_freq)
+}
+genetic_drift(A=0.9, pop=60, gen=1000)
+```
+
+```{r}
+p <- genetic_drift(A=0.5, pop=200, gen=500)
+generations <- 1:length(p)
+plot(p ~ generations, pch = 20,
+     ylab = "allele frequency",
+     xlab = "generation")
+```
+
+
+
+## Loss of an allele
+
+```{r}
+genetic_drift_2 <- function(A, pop, gen){
+  allele_freq <- rep(NA,gen)
+  allele_freq[1] <- A
+
+  allele_counts <- sample(c("A","a"), 
+                             size = pop, 
+                             replace = TRUE, 
+                             prob = c(A, 1-A))
+
+  for(i in 2:gen){
+    allele_counts <- sample(c("A", "a"),
+                            size = pop,
+                            replace = TRUE,
+                            prob = c(allele_freq[i-1],
+                                     (1-allele_freq[i-1])))
+    allele_freq[i] <- length(allele_counts[allele_counts=="A"])/length(allele_counts)
+
+  }
+return(allele_freq[length(allele_freq)])
+}
+
+mean(replicate (1000, genetic_drift_2(A=0.5, pop=200, gen=100)) == 0)
+
+mean(replicate (1000, genetic_drift_2(A=0.25, pop=200, gen=100)) == 0)
+
+mean(replicate (1000, genetic_drift_2(A=0.1, pop=200, gen=100)) == 0)
+```
+
+
+
+
+## Allele trajectories
+
+```{r}
+genetic_drift_3 <- function(A, pop, gen){
+  allele_freq <- rep(NA,gen)
+  allele_freq[1] <- A
+
+  allele_counts <- sample(c("A","a"), 
+                             size = pop, 
+                             replace = TRUE, 
+                             prob = c(A, 1-A))
+
+  for(i in 2:gen){
+    allele_counts <- sample(c("A", "a"),
+                            size = pop,
+                            replace = TRUE,
+                            prob = c(allele_freq[i-1],
+                                     (1-allele_freq[i-1])))
+    allele_freq[i] <- length(allele_counts[allele_counts=="A"])/length(allele_counts)
+
+  }
+return(allele_freq)
+}
+
+genetic_drift_3(A=0.5, pop=200, gen=100)
+
+ran_col <- sample(colors(), size = 100)
+
+p <- genetic_drift_3(A=0.5, pop=200, gen=100)
+generations <- 1:length(p)
+plot(p ~ generations, pch = 20,
+     ylab = "allele frequency",
+     xlab = "generation",
+     ylim = c(0,1))
+for (i in 1:100){
+  lines(genetic_drift_3(A=0.5, pop=200, gen=100),type = "l", col = sample(ran_col, rep = F, size = 1))
+}
+```
+
+
+## Power analysis
+
+```{r}
+#set.seed(1) can make sure you get the same result every time
+power_analysis <- function(x, a, b, length.out, sd) {
+  x <- seq(from =1, to = 10, length.out) # length.out is how many observations we will have
+  a <- 0.5 # intercept
+  b <- 0.1 # slope
+  y_deterministic <- a + b*x
+
+  y_simulated <- rnorm(length(x), mean = y_deterministic, sd = 2)
+
+  mod_sim <- lm(y_simulated ~ x)
+  p_val_slope <- summary(mod_sim)$coef[2,4] # extracts the p-value
+  return(p_val_slope)
+
+}
+x <- replicate(1000, power_analysis())
+hist(x)
+
+mean(x < 0.5) #significant about 50% of the time, since stochastic means random(ish), so it should be significant about half of the time
+
+
+
+```
+
+```{r}
+power_analysis_2 <- function(x, a, b, length.out, sd) {
+  x <- seq(from =1, to = 10, length.out) # length.out is how many observations we will have
+  a <- 0.5 # intercept
+  b <- 0 # slope
+  y_deterministic <- a + b*x
+
+  y_simulated <- rnorm(length(x), mean = y_deterministic, sd = 2)
+
+  mod_sim <- lm(y_simulated ~ x)
+  p_val_slope <- summary(mod_sim)$coef[2,4] # extracts the p-value
+  return(p_val_slope)
+
+}
+x <- replicate(1000, power_analysis_2())
+hist(x)
+
+mean(x < 0.5) #significant about 50% of the time, since stochastic means random(ish), so it should be significant about half of the time
+```
+
+```{r}
+power_analysis_3 <- function(x, a, b, length.out, sd) {
+  x <- seq(from =1, to = 10, length.out) # length.out is how many observations we will have
+  a <- 0.5 # intercept
+  b <- 0.1 # slope
+  y_deterministic <- a + b*x
+
+  y_simulated <- rnorm(length(x), mean = y_deterministic, sd = sd)
+
+  mod_sim <- lm(y_simulated ~ x)
+  p_val_slope <- summary(mod_sim)$coef[2,4] # extracts the p-value
+  return(p_val_slope)
+
+}
+x <- replicate(1000, power_analysis_3(sd=1.5))
+hist(x)
+```
+
+```{r}
+grid <- seq(10,100,5)
+freq <- rep(0, length(grid))
+
+for(i in 1:length(grid)) {
+  matrix <- rep(0,100)
+  for(p in 1:100) {
+    matrix[p] <- power_analysis_3(0.5, 0.1, grid[i], sd=1.5)
+  }
+  freq[i] <- length(matrix[matrix < 0.05])/length(matrix)
+  
+}
+
+plot(x = grid, y = freq)
+```
+
+no discernable pattern?
+
